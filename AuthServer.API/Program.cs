@@ -23,14 +23,12 @@ builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepositor
 builder.Services.AddScoped(typeof(IServiceGeneric<,>), typeof(ServiceGeneric<,>));
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 // Configure TokenOptions
-var tokenOptions = builder.Configuration.GetSection("TokenOptions").Get<CustomTokenOption>();
-builder.Services.Configure<CustomTokenOption>(builder.Configuration.GetSection("TokenOptions"));
+builder.Services.AddOptions<CustomTokenOption>().Bind(builder.Configuration.GetSection("TokenOptions"));
 
 builder.Services.AddDbContext<AppDbContext>(opt =>
 {
@@ -57,9 +55,9 @@ builder.Services.AddAuthentication(opt =>
 {
     opt.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters()
     {
-        ValidIssuer = tokenOptions.Issuer,
-        ValidAudience = tokenOptions.Audience[0],
-        IssuerSigningKey = SignService.GetSymmetricSecýrityKey(tokenOptions.SecurityKey),
+        ValidIssuer = builder.Configuration.GetValue<string>("TokenOptions:Issuer"),
+        ValidAudience = builder.Configuration.GetValue<string>("TokenOptions:Audience:0"),
+        IssuerSigningKey = SignService.GetSymmetricSecýrityKey(builder.Configuration.GetValue<string>("TokenOptions:SecurityKey")),
 
         ValidateIssuerSigningKey = true,
         ValidateAudience = true,
@@ -79,9 +77,13 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+// UseSerilog ekleyin
+
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
 
 app.Run();
+
+// TokenOptions nesnesini ekleyin

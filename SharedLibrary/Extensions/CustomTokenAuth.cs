@@ -1,13 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using SharedLibrary.Configurations;
 using SharedLibrary.Services;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SharedLibrary.Extensions
 {
@@ -15,17 +10,16 @@ namespace SharedLibrary.Extensions
     {
         public static void AddCustomTokenAuth(this IServiceCollection services, CustomTokenOption tokenOptions)
         {
-            services.AddAuthentication(opt =>
+            services.AddAuthentication(options =>
             {
-                opt.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                opt.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-            })
-            .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, opt =>
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            }).AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, opts =>
             {
-                opt.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters()
+                opts.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters()
                 {
                     ValidIssuer = tokenOptions.Issuer,
-                    ValidAudience = tokenOptions.Audience[0],
+                    ValidAudience = tokenOptions.Audience != null && tokenOptions.Audience.Count > 0 ? tokenOptions.Audience[0] : null,
                     IssuerSigningKey = SignService.GetSymmetricSecırityKey(tokenOptions.SecurityKey),
 
                     ValidateIssuerSigningKey = true,
