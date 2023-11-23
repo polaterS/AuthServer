@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Serilog.Context;
 using SharedLibrary.Configurations;
+using SharedLibrary.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
