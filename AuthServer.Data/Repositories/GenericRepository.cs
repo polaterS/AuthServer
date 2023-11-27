@@ -9,49 +9,52 @@ using System.Threading.Tasks;
 
 namespace AuthServer.Data.Repositories
 {
-    public class GenericRepository<TEntity> : IGenericRepository<TEntity> where TEntity : class
+    public class GenericRepository<Tentity> : IGenericRepository<Tentity> where Tentity : class
     {
         private readonly DbContext _context;
-        private readonly DbSet<TEntity> _dbSet;
+        private readonly DbSet<Tentity> _dbSet;
 
         public GenericRepository(AppDbContext context)
         {
             _context = context;
-            _dbSet = context.Set<TEntity>();
+            _dbSet = context.Set<Tentity>();
         }
 
-        public async Task AddAsync(TEntity entity)
+        public async Task AddAsync(Tentity entity)
         {
-            await _dbSet.AddAsync(entity); 
+            await _dbSet.AddAsync(entity);
         }
 
-        public async Task<IEnumerable<TEntity>> GetAllAsync()
+        public async Task<IEnumerable<Tentity>> GetAllAsync()
         {
             return await _dbSet.ToListAsync();
         }
 
-        public async Task<TEntity> GetByIdAsync(int id)
+        public async Task<Tentity> GetByIdAsync(int id)
         {
             var entity = await _dbSet.FindAsync(id);
-            if(entity != null)
+            // EntityState.Detached yapısını service class'sını anlatırken detaylandıracağım.
+            if (entity != null)
             {
                 _context.Entry(entity).State = EntityState.Detached;
             }
+
             return entity;
         }
 
-        public void Remove(TEntity entity)
+        public void Remove(Tentity entity)
         {
             _dbSet.Remove(entity);
         }
 
-        public TEntity Update(TEntity entity)
+        public Tentity Update(Tentity entity)
         {
             _context.Entry(entity).State = EntityState.Modified;
+
             return entity;
         }
 
-        public IQueryable<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
+        public IQueryable<Tentity> Where(Expression<Func<Tentity, bool>> predicate)
         {
             return _dbSet.Where(predicate);
         }

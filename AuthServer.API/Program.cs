@@ -1,3 +1,4 @@
+using AuthServer.Core.Configuration;
 using AuthServer.Core.Models;
 using AuthServer.Core.Repositories;
 using AuthServer.Core.Services;
@@ -5,17 +6,53 @@ using AuthServer.Core.UnitOfWork;
 using AuthServer.Data;
 using AuthServer.Data.Repositories;
 using AuthServer.Service.Services;
-using Microsoft.AspNetCore.Authentication;
+using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Serilog.Context;
+using Microsoft.OpenApi.Models;
 using SharedLibrary.Configurations;
+using SharedLibrary.Extensions;
 using SharedLibrary.Services;
+using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// DI Register
+builder.Services.AddControllers().AddFluentValidation(optipons =>
+{
+    optipons.RegisterValidatorsFromAssembly(Assembly.GetExecutingAssembly());
+});
+
+builder.Services.UseCustomValidationResponse();
+
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "Your API", Version = "v1" });
+
+    // JWT yetkilendirme eklemek için
+    var securityScheme = new OpenApiSecurityScheme
+    {
+        Name = "JWT Authentication",
+        Description = "Enter JWT token",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        Reference = new OpenApiReference
+        {
+            Type = ReferenceType.SecurityScheme,
+            Id = "Bearer"
+        }
+    };
+
+    c.AddSecurityDefinition("Bearer", securityScheme);
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        { securityScheme, new[] { "Bearer" } }
+    });
+});
+
 builder.Services.AddScoped<AuthServer.Core.Services.IAuthenticationService, AuthServer.Service.Services.AuthenticationService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
@@ -23,41 +60,36 @@ builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepositor
 builder.Services.AddScoped(typeof(IServiceGeneric<,>), typeof(ServiceGeneric<,>));
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-
-// Configure TokenOptions
-builder.Services.AddOptions<CustomTokenOption>().Bind(builder.Configuration.GetSection("TokenOptions"));
-
-builder.Services.AddDbContext<AppDbContext>(opt =>
+builder.Services.AddDbContext<AppDbContext>(options =>
 {
-    opt.UseSqlServer(builder.Configuration.GetConnectionString("SqlServer"), sqlOptions =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("SqlServer"), sqlOptions =>
     {
-        sqlOptions.MigrationsAssembly("AuthServer.Data");
+        sqlOptions.MigrationsAssembly("UdemyAuthServer.Data");
     });
 });
 
-builder.Services.AddIdentity<AppUser, IdentityRole>(opt =>
+builder.Services.AddIdentity<AppUser, IdentityRole>(Opt =>
 {
-    opt.User.RequireUniqueEmail = true;
-    opt.Password.RequireNonAlphanumeric = false;
-})
-.AddEntityFrameworkStores<AppDbContext>()
-.AddDefaultTokenProviders();
+    Opt.User.RequireUniqueEmail = true;
+    Opt.Password.RequireNonAlphanumeric = false;
+}).AddEntityFrameworkStores<AppDbContext>().AddDefaultTokenProviders();
 
-builder.Services.AddAuthentication(opt =>
+builder.Services.Configure<CustomTokenOption>(builder.Configuration.GetSection("TokenOptions"));
+
+builder.Services.Configure<List<Client>>(builder.Configuration.GetSection("Clients"));
+
+builder.Services.AddAuthentication(options =>
 {
-    opt.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    opt.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, opt =>
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+}).AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, opts =>
 {
-    opt.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters()
+    var tokenOptions = builder.Configuration.GetSection("TokenOptions").Get<CustomTokenOption>();
+    opts.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters()
     {
-        ValidIssuer = builder.Configuration.GetValue<string>("TokenOptions:Issuer"),
-        ValidAudience = builder.Configuration.GetValue<string>("TokenOptions:Audience:0"),
-        IssuerSigningKey = SignService.GetSymmetricSecýrityKey(builder.Configuration.GetValue<string>("TokenOptions:SecurityKey")),
+        ValidIssuer = tokenOptions.Issuer,
+        ValidAudience = tokenOptions.Audience[0],
+        IssuerSigningKey = SignService.GetSymmetricSecurityKey(tokenOptions.SecurityKey),
 
         ValidateIssuerSigningKey = true,
         ValidateAudience = true,
@@ -71,13 +103,13 @@ var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
+    app.UseDeveloperExceptionPage();
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
+app.UseCustomException();
 app.UseHttpsRedirection();
-
-// UseSerilog ekleyin
 
 app.UseAuthentication();
 app.UseAuthorization();
@@ -85,5 +117,3 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
-
-// TokenOptions nesnesini ekleyin

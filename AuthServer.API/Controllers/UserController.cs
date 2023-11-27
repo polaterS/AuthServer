@@ -17,6 +17,7 @@ namespace AuthServer.API.Controllers
             _userService = userService;
         }
 
+        //api/user
         [HttpPost]
         public async Task<IActionResult> CreateUser(CreateUserDto createUserDto)
         {

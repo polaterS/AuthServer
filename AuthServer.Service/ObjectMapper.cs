@@ -9,7 +9,7 @@ namespace AuthServer.Service
 {
     public static class ObjectMapper
     {
-        private static readonly Lazy<IMapper> mapper = new Lazy<IMapper>(() =>
+        private static readonly Lazy<IMapper> lazy = new Lazy<IMapper>(() =>
         {
             var config = new MapperConfiguration(cfg =>
             {
@@ -19,6 +19,6 @@ namespace AuthServer.Service
             return config.CreateMapper();
         });
 
-        public static IMapper Mapper => mapper.Value;
+        public static IMapper Mapper => lazy.Value;
     }
 }

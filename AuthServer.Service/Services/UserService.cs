@@ -22,22 +22,24 @@ namespace AuthServer.Service.Services
 
         public async Task<Response<UserAppDto>> CreateUserAsync(CreateUserDto createUserDto)
         {
-            var user = new AppUser { UserName = createUserDto.UserName, Email = createUserDto.Email };
+            var user = new AppUser { Email = createUserDto.Email, UserName = createUserDto.UserName };
 
             var result = await _userManager.CreateAsync(user, createUserDto.Password);
+
             if (!result.Succeeded)
             {
                 var errors = result.Errors.Select(x => x.Description).ToList();
+
                 return Response<UserAppDto>.Fail(new ErrorDto(errors, true), 400);
             }
-
-            return Response<UserAppDto>.Success(ObjectMapper.Mapper.Map<UserAppDto>(user),200);
+            return Response<UserAppDto>.Success(ObjectMapper.Mapper.Map<UserAppDto>(user), 200);
         }
 
         public async Task<Response<UserAppDto>> GetUserByNameAsync(string userName)
         {
             var user = await _userManager.FindByNameAsync(userName);
-            if(user == null)
+
+            if (user == null)
             {
                 return Response<UserAppDto>.Fail("UserName not found", 404, true);
             }
