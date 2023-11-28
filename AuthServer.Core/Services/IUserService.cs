@@ -1,4 +1,5 @@
 ﻿using AuthServer.Core.DTOs;
+using Microsoft.AspNetCore.Mvc;
 using SharedLibrary.Dtos;
 using System;
 using System.Collections.Generic;
@@ -12,5 +13,6 @@ namespace AuthServer.Core.Services
     {
         Task<Response<UserAppDto>> CreateUserAsync(CreateUserDto createUserDto);
         Task<Response<UserAppDto>> GetUserByNameAsync(string userName);
+        Task<Response<NoContentResult>> CreateUserRoles(string userName);
     }
 }

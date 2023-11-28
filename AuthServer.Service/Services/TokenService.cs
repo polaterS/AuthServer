@@ -7,14 +7,9 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using SharedLibrary.Configurations;
 using SharedLibrary.Services;
-using System;
-using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
-using System.Linq;
 using System.Security.Claims;
 using System.Security.Cryptography;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace AuthServer.Service.Services
 {
@@ -42,18 +37,22 @@ namespace AuthServer.Service.Services
             return Convert.ToBase64String(numberByte);
         }
 
-        private IEnumerable<Claim> GetClaims(AppUser userApp, List<String> audiences)
+        private async Task<IEnumerable<Claim>> GetClaims(AppUser userApp, List<String> audiences)
         {
+            var userRoles = await _userManager.GetRolesAsync(userApp);
+
             var userList = new List<Claim> {
             new Claim(ClaimTypes.NameIdentifier,userApp.Id),
             new Claim(JwtRegisteredClaimNames.Email, userApp.Email),
             new Claim(ClaimTypes.Name,userApp.UserName),
-            new Claim(JwtRegisteredClaimNames.Jti,Guid.NewGuid().ToString())
+            new Claim(JwtRegisteredClaimNames.Jti,Guid.NewGuid().ToString()),
+            new Claim("city", userApp.City),
+            new Claim("birth-date", userApp.BirthDate.ToShortTimeString()),
             };
 
             userList.AddRange(audiences.Select(x => new Claim(JwtRegisteredClaimNames.Aud, x)));
-
-            return userList;
+            userList.AddRange(userRoles.Select(x => new Claim(ClaimTypes.Role, x)));
+            return userList.AsEnumerable();
         }
 
         private IEnumerable<Claim> GetClaimsByClient(Client client)
@@ -75,11 +74,12 @@ namespace AuthServer.Service.Services
 
             SigningCredentials signingCredentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256Signature);
 
+
             JwtSecurityToken jwtSecurityToken = new JwtSecurityToken(
                 issuer: _tokenOption.Issuer,
                 expires: accessTokenExpiration,
                  notBefore: DateTime.Now,
-                 claims: GetClaims(userApp, _tokenOption.Audience),
+                 claims: GetClaims(userApp, _tokenOption.Audience).Result,
                  signingCredentials: signingCredentials);
 
             var handler = new JwtSecurityTokenHandler();

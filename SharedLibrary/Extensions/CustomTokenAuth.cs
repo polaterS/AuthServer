@@ -19,7 +19,7 @@ namespace SharedLibrary.Extensions
                 opts.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters()
                 {
                     ValidIssuer = tokenOptions.Issuer,
-                    ValidAudience = tokenOptions.Audience[0],
+                    ValidAudience = tokenOptions.Audience != null && tokenOptions.Audience.Count > 0 ? tokenOptions.Audience[0] : null,
                     IssuerSigningKey = SignService.GetSymmetricSecurityKey(tokenOptions.SecurityKey),
 
                     ValidateIssuerSigningKey = true,

@@ -64,7 +64,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 {
     options.UseSqlServer(builder.Configuration.GetConnectionString("SqlServer"), sqlOptions =>
     {
-        sqlOptions.MigrationsAssembly("UdemyAuthServer.Data");
+        sqlOptions.MigrationsAssembly("AuthServer.Data");
     });
 });
 
